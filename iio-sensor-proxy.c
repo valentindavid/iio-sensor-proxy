@@ -597,8 +597,9 @@ prepare_output (OrientationData *or_data,
 
 	data.data = g_malloc(or_data->scan_size * buf_len);
 
-	/* Attempt to open non blocking to access dev */
-	fp = open (or_data->dev_path, O_RDONLY | O_NONBLOCK);
+	write_sysfs_int("buffer/enable", dev_dir_name, 1);
+
+	fp = open (or_data->dev_path, O_RDONLY);
 	if (fp == -1) { /* If it isn't there make the node */
 		g_warning ("Failed to open %s : %s", or_data->dev_path, strerror(errno));
 		ret = -errno;
@@ -607,8 +608,11 @@ prepare_output (OrientationData *or_data,
 
 	/* Actually read the data */
 	data.read_size = read (fp, data.data, buf_len * or_data->scan_size);
-	if (data.read_size == -EAGAIN) {
-		g_debug ("No new data available");
+
+	write_sysfs_int("buffer/enable", dev_dir_name, 0);
+
+	if (data.read_size == -1) {
+    	        ret = -errno;
 	} else {
 		ret = callback(data, or_data);
 	}
